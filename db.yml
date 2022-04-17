@@ -1,0 +1,218 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: production
+  password:
+    Type: String
+  VpcCIDR:
+    Type: String
+    Default: '10.50.0.0/16'
+  Subnet1CIDR:
+    Type: String
+    Default: '10.50.0.0/24'
+  Subnet2CIDR:
+    Type: String
+    Default: '10.50.1.0/24'
+  Subnet3CIDR:
+    Type: String
+    Default: '10.50.2.0/24'
+  transit:
+    Type: String
+# Mappings:
+#   # Hard values for the subnet masks. These masks define
+#   # the range of internal IP addresses that can be assigned
+#   # The VPC can have all IP's from 10.0.0.0 to 10.0.255.255
+#   # There are two subnets which cover the ranges:
+#   #
+#   # 10.0.0.0 - 10.0.0.255
+#   # 10.0.1.0 - 10.0.1.255
+#   #
+#   # If you need more IP addresses (perhaps you have so many
+#   # instances that you run out) then you can customize these
+#   # ranges to add more
+#   SubnetConfig:
+#     VpcDBStaging:
+#       CIDR: '10.50.0.0/16'
+#     SubnetStaging1:
+#       CIDR: '10.50.0.0/24'
+#     SubnetStaging2:
+#       CIDR: '10.50.1.0/24'
+#     SubnetStaging3:
+#       CIDR: '10.50.2.0/24'
+Resources:
+  # VPC in which containers will be networked.
+  # It has two public subnets
+  # We distribute the subnets across the first two available subnets
+  # for the region, for high availability.
+  VpcDBStaging:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+
+  ClusterSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: DB Security Group
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 3306
+        ToPort: 3306
+        CidrIp: 10.70.0.0/16
+        Description: 'Access from ECS cluster'
+      VpcId: !Ref VpcDBStaging
+
+  # Two public subnets, where containers can have public IP addresses
+  SubnetStaging1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+         Fn::Select:
+         - 0
+         - Fn::GetAZs: {Ref: 'AWS::Region'}
+      VpcId: !Ref 'VpcDBStaging'
+      CidrBlock: !Ref Subnet1CIDR
+      MapPublicIpOnLaunch: false
+  SubnetStaging2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+         Fn::Select:
+         - 1
+         - Fn::GetAZs: {Ref: 'AWS::Region'}
+      VpcId: !Ref 'VpcDBStaging'
+      CidrBlock: !Ref Subnet2CIDR
+      MapPublicIpOnLaunch: false
+  SubnetStaging3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+         Fn::Select:
+         - 2
+         - Fn::GetAZs: {Ref: 'AWS::Region'}
+      VpcId: !Ref 'VpcDBStaging'
+      CidrBlock: !Ref Subnet3CIDR
+      MapPublicIpOnLaunch: false
+  DBSubnetGroupStaging: 
+    Properties: 
+      DBSubnetGroupDescription: description
+      SubnetIds: 
+        - !Ref SubnetStaging1
+        - !Ref SubnetStaging2
+        - !Ref SubnetStaging3
+    Type: "AWS::RDS::DBSubnetGroup"
+  
+  RDSCluster: 
+    Properties: 
+      DBClusterParameterGroupName: 
+        Ref: RDSDBClusterParameterGroup
+      DBSubnetGroupName: 
+        Ref: DBSubnetGroupStaging
+      Engine: aurora
+      MasterUsername: admin
+      MasterUserPassword: 
+        Ref: password
+    Type: "AWS::RDS::DBCluster"
+  RDSCluster2: 
+    Properties: 
+      DBClusterParameterGroupName: default.aurora-postgresql11
+      DBSubnetGroupName: 
+        Ref: DBSubnetGroupStaging
+      Engine: aurora-postgresql
+      EngineVersion: '11.7'
+      MasterUsername: postgres
+      MasterUserPassword:
+        Ref: password
+    Type: "AWS::RDS::DBCluster"
+  RDSCluster3: 
+    Properties: 
+      DBClusterParameterGroupName: default.aurora-postgresql11
+      DBSubnetGroupName: 
+        Ref: DBSubnetGroupStaging
+      Engine: aurora-postgresql
+      EngineVersion: '11.7'
+      MasterUsername: postgres
+      MasterUserPassword:
+        Ref: password
+    Type: "AWS::RDS::DBCluster"
+  RDSDBClusterParameterGroup: 
+    Properties: 
+      Description: "CloudFormation Sample Aurora Cluster Parameter Group"
+      Family: aurora5.6
+      Parameters: 
+        time_zone: US/Eastern
+    Type: "AWS::RDS::DBClusterParameterGroup"
+  db: 
+    Properties:
+      DBInstanceIdentifier: db
+      DBClusterIdentifier: 
+        Ref: RDSCluster
+      DBInstanceClass: db.r3.xlarge
+      DBParameterGroupName: 
+        Ref: RDSDBParameterGroup
+      DBSubnetGroupName: 
+        Ref: DBSubnetGroupStaging
+      Engine: aurora
+      PubliclyAccessible: "false"
+    Type: "AWS::RDS::DBInstance"
+  db2: 
+    Properties:
+      DBInstanceIdentifier: db2
+      DBClusterIdentifier: 
+        Ref: RDSCluster2
+      DBInstanceClass: db.r4.xlarge
+      DBSubnetGroupName: 
+        Ref: DBSubnetGroupStaging
+      Engine: aurora-postgresql
+      PubliclyAccessible: "false"
+    Type: "AWS::RDS::DBInstance"
+  db3: 
+    Properties:
+      DBInstanceIdentifier: db3
+      DBClusterIdentifier: 
+        Ref: RDSCluster3
+      DBInstanceClass: db.r4.xlarge
+      DBSubnetGroupName: 
+        Ref: DBSubnetGroupStaging
+      Engine: aurora-postgresql
+      PubliclyAccessible: "false"
+    Type: "AWS::RDS::DBInstance"
+  RDSDBParameterGroup:
+    Type: 'AWS::RDS::DBParameterGroup'
+    Properties:
+      Description: CloudFormation Sample Aurora Parameter Group
+      Family: aurora5.6
+      Parameters:
+        sql_mode: IGNORE_SPACE
+        max_allowed_packet: 1000000000
+        innodb_buffer_pool_size: '{DBInstanceClassMemory*3/4}'
+        net_buffer_length: 1000000
+        innodb_lock_wait_timeout: 120
+        log_bin_trust_function_creators: 1
+        max_heap_table_size: 67108864
+        net_read_timeout: 1200
+        net_write_timeout: 1200
+
+  RDSEndpointStaging1:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PrivateDnsEnabled: true
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.rds"
+      SubnetIds: 
+        - !Ref SubnetStaging1
+        - !Ref SubnetStaging2
+        - !Ref SubnetStaging3
+      VpcEndpointType: 'Interface'
+      VpcId: 
+        Ref: VpcDBStaging
+  StagingTGattachment:
+    Type: AWS::EC2::TransitGatewayAttachment
+    Properties: 
+      SubnetIds: 
+        - !Ref SubnetStaging1
+        - !Ref SubnetStaging2
+        - !Ref SubnetStaging3 
+      TransitGatewayId: !Ref transit
+      VpcId: !Ref VpcDBStaging

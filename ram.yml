@@ -1,0 +1,17 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  AccountId:
+    Type: String
+  Name:
+    Type: String
+  ARN:
+    Type: string
+Resources:
+  myresourceshare:
+    Type: "AWS::RAM::ResourceShare"
+  properties:
+    Name: !Ref "Name"
+    ResourceArns:
+      - !Ref "ARN"
+    Principals:
+      - !Ref "AccountId"

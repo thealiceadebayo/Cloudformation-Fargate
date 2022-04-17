@@ -1,0 +1,11 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  StagingTransitGateway:
+    Type: "AWS::EC2::TransitGateway"
+    Properties:
+      AmazonSideAsn: 65000
+      Description: "TGW Route Integration Test"
+      AutoAcceptSharedAttachments: "disable"
+      DefaultRouteTableAssociation: "enable"
+      DnsSupport: "enable"
+      VpnEcmpSupport: "enable"
