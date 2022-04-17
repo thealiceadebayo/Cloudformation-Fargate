@@ -1,6 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: AWS Fargate cluster running containers in a public subnet. Only supports
              public facing load balancer, and public service discovery namespaces.
+             A network stack for deploying containers in AWS ECS.
 Parameters:
   EnvironmentName:
     Type: String
@@ -383,61 +384,6 @@ Resources:
             Locations:
             - AQ
             - CV
-  NLBstaging:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      IpAddressType: ipv4
-      Name: 'nlbStaging'
-      Scheme: internal
-      Subnets:
-        - !Ref PrivateSubnetStaging1
-        - !Ref PrivateSubnetStaging2
-        - !Ref PrivateSubnetStaging3
-      Type: network
-  NLBstaging2:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      IpAddressType: ipv4
-      Name: 'nlbStaging2'
-      Scheme: internal
-      Subnets:
-        - !Ref PrivateSubnetStaging1
-        - !Ref PrivateSubnetStaging2
-        - !Ref PrivateSubnetStaging3
-      Type: network
-  NLBstaging3:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      IpAddressType: ipv4
-      Name: 'nlbStaging3'
-      Scheme: internal
-      Subnets:
-        - !Ref PrivateSubnetStaging1
-        - !Ref PrivateSubnetStaging2
-        - !Ref PrivateSubnetStaging3
-      Type: network
-  NLBstaging4:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      IpAddressType: ipv4
-      Name: 'nlbStaging4'
-      Scheme: internal
-      Subnets:
-        - !Ref PrivateSubnetStaging1
-        - !Ref PrivateSubnetStaging2
-        - !Ref PrivateSubnetStaging3
-      Type: network
-  NLBstaging5:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      IpAddressType: ipv4
-      Name: 'nlbStaging5'
-      Scheme: internal
-      Subnets:
-        - !Ref PrivateSubnetStaging1
-        - !Ref PrivateSubnetStaging2
-        - !Ref PrivateSubnetStaging3
-      Type: network
   StagingFGTGattachment:
     Type: AWS::EC2::TransitGatewayAttachment
     Properties: 
